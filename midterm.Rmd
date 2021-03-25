@@ -144,27 +144,90 @@ geom_bar()+
 
 # Writing out fishnet as shapefile to perform zonal statistics as table on a euclidean distance raster from Calgary's water features 
 
-st_write(fishnet, "C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/fishnet.shp")
+# st_write(fishnet, "C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/fishnet.shp")
 
 # Reading zonal statistics Shapefile 
 
-ZonalWater <- st_read("C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/ZonalWater.dbf")%>% 
+inundation_fishnet <- st_read("C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/ZonalWater.dbf")%>% 
   dplyr::select(uniqueID, MEAN)%>%
   left_join(inundation_fishnet, .)%>% 
   na.omit()
 
 ggplot() + 
-  geom_sf(data = ZonalWater, aes(fill = MEAN))+ 
+  geom_sf(data = inundation_fishnet, aes(fill = MEAN))+ 
   mapTheme()
 
 
 ggplot()+ 
-  geom_bar(data = ZonalWater, aes(x = Label, y = MEAN), stat="identity", fill = "blue")
+  geom_bar(data = inundation_fishnet, aes(x = Label, y = MEAN), stat="identity", fill = "blue")
 
 ```
+
 ``` {r Imperviousness, message=FALSE, warning=FALSE, include=TRUE, results='hide', cache=TRUE}
 
-LandUse <- st_read("C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/Calgary_LandUse.csv")
+Impervious <- st_read("C:/Users/Kyle McCarthy/Documents/GitHub/CPLN-675-Midterm-/Data/Impervious/Imperv_cal.geojson")%>%
+  st_transform(crs = sr)
+
+# The Intersection Here Takes a While -- est. 20 min 
+
+inundation_fishnet <- 
+  Impervious%>% 
+  filter(gen_surface == "Gravel" | gen_surface == "Buildings" | gen_surface == "Pavement" | gen_surface == "Bridge" | gen_surface == "Roads (Pavement)" )%>% 
+  st_make_valid()%>%
+  st_intersection(fishnet)%>% 
+  mutate(Area = as.numeric(st_area(.)))%>% 
+  st_drop_geometry()%>% 
+  group_by(uniqueID)%>% 
+  summarise(Area = sum(Area))%>% 
+  mutate(pctImpervious = Area / 250000)%>% 
+  left_join(inundation_fishnet, .)%>% 
+  mutate(Imperv = ifelse(pctImpervious > 0.50, "Pervious", "Impermeable"))%>% 
+  na.omit()
+
+inundation_fishnet<- 
+  inundation_fishnet%>% 
+  mutate(Imperv = ifelse(pctImpervious > 0.50, "Impervious", "Permeable"))
+  
+
+
+# Group for Graph 
+
+ggplot(inundation_fishnet, aes(x = Imperv)) + 
+  geom_bar(aes(fill = Label), position = 'dodge')+ 
+  scale_fill_manual(values = c("#E8E6EE", "#08072D"))
+
+
+
+
+```
+
+```{r Building Denisty, message=FALSE, warning=FALSE, include=TRUE, results='hide', cache=TRUE}
+
+inundation_Fish <-st_read("C:/Users/Kyle McCarthy/Documents/GitHub/CPLN-675-Midterm-/Data/Buildings.geojson")%>% 
+  st_centroid()%>% 
+  st_transform(crs = sr)%>% 
+  mutate(BuildingCount = 1) %>%
+  dplyr::select(BuildingCount)%>%
+  aggregate(., inundation_fishnet, sum)%>% 
+  mutate_all(funs(replace_na(.,0)))%>% 
+  mutate(uniqueID = rownames(.))%>%
+  st_drop_geometry()%>% 
+  left_join(inundation_fishnet, .)
+
+
+BuidlingStats<- 
+  inundation_Fish%>% 
+  st_drop_geometry()%>%
+  na.omit()%>%
+  group_by(Label)%>% 
+  summarise(BuildingSum = sum(BuildingCount), 
+            BuildingCountAverage = mean(BuildingCount))
+
+
+ggplot()+ 
+  geom_bar(data = BuidlingStats, aes(x = Label, y = BuildingCountAverage), stat="identity", fill = "blue")
+
+
 ```
 
 
