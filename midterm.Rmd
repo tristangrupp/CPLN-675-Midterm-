@@ -162,4 +162,10 @@ ggplot()+
   geom_bar(data = ZonalWater, aes(x = Label, y = MEAN), stat="identity", fill = "blue")
 
 ```
+``` {r Imperviousness, message=FALSE, warning=FALSE, include=TRUE, results='hide', cache=TRUE}
+
+LandUse <- st_read("C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/Calgary_LandUse.csv")
+```
+
+
 
