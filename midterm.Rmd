@@ -142,22 +142,24 @@ geom_bar()+
 
 ```{r ImportData, message=FALSE, warning=FALSE, include=TRUE, results='hide', cache=TRUE}
 
-library(rgeos) 
-library(sp)
-library(spdep)
+# Writing out fishnet as shapefile to perform zonal statistics as table on a euclidean distance raster from Calgary's water features 
 
-FishnetCentroids <- 
-  fishnet%>% 
-  st_centroid()%>% 
-  as_Spatial()
+st_write(fishnet, "C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/fishnet.shp")
 
-# spts = SpatialPoints(FishnetCentroids)
-# watersp = SpatialPolygons(water, geometry)
-# 
-# apply(gDistance(spts, water,byid=TRUE),2,min)
-# 
-# WaterDist <- 
-#   water%>% 
-#   mutate(waterDist = gDistance(st_centroid(fishnet), .))
+# Reading zonal statistics Shapefile 
+
+ZonalWater <- st_read("C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/ZonalWater.dbf")%>% 
+  dplyr::select(uniqueID, MEAN)%>%
+  left_join(inundation_fishnet, .)%>% 
+  na.omit()
+
+ggplot() + 
+  geom_sf(data = ZonalWater, aes(fill = MEAN))+ 
+  mapTheme()
+
+
+ggplot()+ 
+  geom_bar(data = ZonalWater, aes(x = Label, y = MEAN), stat="identity", fill = "blue")
+
 ```
 
