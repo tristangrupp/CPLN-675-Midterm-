@@ -63,6 +63,11 @@ imperviousness <- st_read("https://data.calgary.ca/resource/i9mt-qafb.geojson")%
 water <- st_read("C:/Users/Kyle McCarthy/Documents/CPLN 675/Midterm/water.shp")%>% 
   st_transform(crs = sr)
 
+treecanopy <- st_read("C:/Users/Tristan/Desktop/PennSpring2021/CPLN675/midterm/calgarytreecover/calgarytreecover_repair.shp") %>%
+  st_transform(crs = sr) %>%
+  st_make_valid
+  
+  
 
 fishnet <- 
   st_make_grid(Calgary,
@@ -229,6 +234,36 @@ ggplot()+
 
 
 ```
+
+
+```{r Tree Canopy Fishnet, message=FALSE, warning=FALSE, include=TRUE, results='hide', cache=TRUE}
+
+treecanopy_fishnet <-
+  treecanopy %>%
+  st_intersection(fishnet, treecanopy) %>%
+  mutate(Area = as.numeric(st_area(.))) %>%
+  st_drop_geometry()%>%
+  group_by(uniqueID)%>%
+  summarise(TreeCanopyArea = sum(Area)) %>%
+  left_join(fishnet, .)%>%
+  mutate(pctTreeCanopy = TreeCanopyArea / 250000)%>%
+  mutate_all(funs(replace_na(.,0)))%>%
+  mutate(Treed = ifelse(pctTreeCanopy > .50, 1, 0))%>%
+  mutate(Label = ifelse(Treed == 1, "Treed", "Not Treed"))
+
+
+
+ggplot()+
+  geom_sf(data = treecanopy_fishnet, aes(fill=pctTreeCanopy))+
+  scale_fill_gradient(low = "black", high = "green")+
+  labs(title="Calgary Tree Canopy Percent of Fishnets")+
+  theme(legend.position = "bottom")+
+  mapTheme()
+  
+```
+
+
+
 
 
 
