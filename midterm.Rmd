@@ -20,6 +20,8 @@ library(sf)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
+library(lwgeom)
+
 
 
 mapTheme <- function(base_size = 12) {
